@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MZTV — Infinite OBAS</title>
+<style>
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}
+  body{image-rendering:pixelated}
+  canvas{display:block;width:100vw;height:100vh;image-rendering:pixelated;image-rendering:crisp-edges}
+  .bug{position:fixed;left:18px;top:18px;border:2px solid #bee119;background:#000;color:#bee119;padding:8px 10px;font:700 16px/1 monospace;letter-spacing:.08em;z-index:2}
+</style>
+</head>
+<body>
+<div class="bug">MZTV</div>
+<canvas id="c"></canvas>
+<script>
+(() => {
+  const c = document.getElementById('c');
+  const ctx = c.getContext('2d', {alpha:false});
+  const off = document.createElement('canvas');
+  const octx = off.getContext('2d', {alpha:false});
+
+  const COLORS = [
+    [0,0,0],
+    [190,225,25],
+    [235,55,145],
+    [240,238,215]
+  ];
+
+  let W=160,H=90,t=0,seed=Math.random()*1000;
+  off.width=W; off.height=H;
+  ctx.imageSmoothingEnabled = false;
+  octx.imageSmoothingEnabled = false;
+
+  function resize(){
+    const dpr = 1;
+    c.width = Math.floor(innerWidth*dpr);
+    c.height = Math.floor(innerHeight*dpr);
+    ctx.imageSmoothingEnabled = false;
+  }
+  addEventListener('resize',resize); resize();
+
+  function hash(x,y,s){
+    const v=Math.sin(x*12.9898+y*78.233+s*37.719)*43758.5453;
+    return v-Math.floor(v);
+  }
+
+  function frame(){
+    t += 0.0105;
+    const img=octx.createImageData(W,H);
+    const a=t;
+    const cx=W*.5 + Math.cos(a*.37)*W*.11;
+    const cy=H*.5 + Math.sin(a*.29)*H*.15;
+
+    for(let y=0;y<H;y++){
+      for(let x=0;x<W;x++){
+        const dx=x-cx, dy=y-cy;
+        const r=Math.sqrt(dx*dx+dy*dy);
+        const ang=Math.atan2(dy,dx);
+
+        let f =
+          Math.sin(r*.31 - a*2.1 + Math.sin(ang*3+a*.7)*1.4) +
+          .72*Math.sin(x*.20 + Math.sin(y*.11+a*.9)*2.2 + a*.6) +
+          .63*Math.cos(y*.27 - Math.sin(x*.08-a*.5)*2.4 - a*1.1) +
+          .45*Math.sin((x+y)*.13 + Math.sin(a*.41)*4.0);
+
+        // slow topology drift so the structure never truly repeats
+        f += (hash(Math.floor(x/6),Math.floor(y/6),seed+Math.floor(a/18))*2-1)*.55;
+
+        let ci=0;
+        if(f>1.02) ci=2;
+        else if(f<-.88) ci=1;
+        else {
+          const band=Math.abs(f);
+          const ordered=((x*3+y*5+Math.floor(a*7))%11);
+          if(band<.34 && ordered<3) ci=3;
+        }
+
+        const p=(y*W+x)*4;
+        const col=COLORS[ci];
+        img.data[p]=col[0];
+        img.data[p+1]=col[1];
+        img.data[p+2]=col[2];
+        img.data[p+3]=255;
+      }
+    }
+
+    octx.putImageData(img,0,0);
+    ctx.fillStyle='#000'; ctx.fillRect(0,0,c.width,c.height);
+
+    // integer-scaled nearest-neighbor fit, centered; no smoothing ever
+    const sx=Math.max(1,Math.floor(c.width/W));
+    const sy=Math.max(1,Math.floor(c.height/H));
+    const s=Math.max(1,Math.min(sx,sy));
+    const dw=W*s, dh=H*s;
+    const dx=Math.floor((c.width-dw)/2), dy=Math.floor((c.height-dh)/2);
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(off,0,0,W,H,dx,dy,dw,dh);
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
