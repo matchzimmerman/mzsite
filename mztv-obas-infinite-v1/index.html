@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MZTV — Infinite OBAS</title>
+<style>
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}
+  body{image-rendering:pixelated}
+  canvas{display:block;width:100vw;height:100vh;image-rendering:pixelated;image-rendering:crisp-edges}
+  .bug{
+    position:fixed;left:18px;top:18px;
+    border:2px solid #bee119;background:#000;color:#bee119;
+    padding:8px 10px;font:700 16px/1 monospace;letter-spacing:.08em;z-index:2
+  }
+</style>
+</head>
+<body>
+<div class="bug">MZTV</div>
+<canvas id="c"></canvas>
+<script>
+(() => {
+  const c = document.getElementById('c');
+  const ctx = c.getContext('2d', {alpha:false});
+  const off = document.createElement('canvas');
+  const octx = off.getContext('2d', {alpha:false});
+
+  const BLACK=[0,0,0];
+  const LIME=[190,225,25];
+  const PINK=[235,55,145];
+  const OFF=[240,238,215];
+
+  const W=192, H=108;
+  off.width=W; off.height=H;
+  let t=0;
+
+  ctx.imageSmoothingEnabled=false;
+  octx.imageSmoothingEnabled=false;
+
+  function resize(){
+    c.width=Math.max(1,Math.floor(innerWidth));
+    c.height=Math.max(1,Math.floor(innerHeight));
+    ctx.imageSmoothingEnabled=false;
+  }
+  addEventListener('resize',resize);
+  resize();
+
+  const sources=[
+    {x:.18,y:.22,rx:.16,ry:.22,p:.0,s: 1},
+    {x:.40,y:.18,rx:.22,ry:.15,p:1.3,s:-1},
+    {x:.66,y:.26,rx:.18,ry:.24,p:2.6,s: 1},
+    {x:.84,y:.18,rx:.13,ry:.18,p:4.1,s:-1},
+    {x:.25,y:.55,rx:.22,ry:.18,p:5.2,s:-1},
+    {x:.52,y:.52,rx:.20,ry:.25,p:2.1,s: 1},
+    {x:.78,y:.55,rx:.24,ry:.18,p:3.4,s:-1},
+    {x:.14,y:.82,rx:.18,ry:.17,p:4.8,s: 1},
+    {x:.43,y:.82,rx:.25,ry:.15,p:.8,s:-1},
+    {x:.72,y:.82,rx:.18,ry:.20,p:5.9,s: 1},
+    {x:.91,y:.78,rx:.13,ry:.18,p:2.9,s:-1}
+  ];
+
+  function fieldAt(x,y,a){
+    let f=0;
+    for(let i=0;i<sources.length;i++){
+      const q=sources[i];
+      const driftX = Math.sin(a*(0.071+i*.0031)+q.p) * (6 + (i%3)*2);
+      const driftY = Math.cos(a*(0.059+i*.0027)+q.p*1.37) * (5 + (i%4));
+      const px=q.x*W + driftX;
+      const py=q.y*H + driftY;
+      const rx=q.rx*W*(1 + .10*Math.sin(a*.043+q.p));
+      const ry=q.ry*H*(1 + .10*Math.cos(a*.037+q.p));
+      const dx=(x-px)/rx;
+      const dy=(y-py)/ry;
+      const d=dx*dx+dy*dy;
+      f += q.s * Math.exp(-d*1.85);
+    }
+    f += .30*Math.sin(x*.055 + 1.7*Math.sin(y*.028 + a*.083));
+    f += .25*Math.cos(y*.067 - 1.9*Math.sin(x*.024 - a*.071));
+    f += .16*Math.sin((x+y)*.031 + a*.047);
+    return f;
+  }
+
+  function orderedDot(x,y,a){
+    const phase=Math.floor(a*2.4);
+    return ((x*5 + y*3 + phase) & 7) < 2;
+  }
+
+  function frame(){
+    t += 0.016;
+    const img=octx.createImageData(W,H);
+    for(let y=0;y<H;y++){
+      for(let x=0;x<W;x++){
+        const f=fieldAt(x,y,t);
+        const af=Math.abs(f);
+        let col=BLACK;
+        if(af > .22){
+          col = f > 0 ? PINK : LIME;
+        } else {
+          col = BLACK;
+          const edgeBand = af > .075;
+          const nearEdge = af > .145;
+          if(edgeBand && orderedDot(x,y,t) && (nearEdge || ((x+y)&1)===0)) col=OFF;
+        }
+        const p=(y*W+x)*4;
+        img.data[p]=col[0];img.data[p+1]=col[1];img.data[p+2]=col[2];img.data[p+3]=255;
+      }
+    }
+    octx.putImageData(img,0,0);
+    ctx.fillStyle='#000';ctx.fillRect(0,0,c.width,c.height);
+    const sx=Math.max(1,Math.floor(c.width/W));
+    const sy=Math.max(1,Math.floor(c.height/H));
+    const s=Math.max(1,Math.min(sx,sy));
+    const dw=W*s,dh=H*s;
+    const dx=Math.floor((c.width-dw)/2),dy=Math.floor((c.height-dh)/2);
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(off,0,0,W,H,dx,dy,dw,dh);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
