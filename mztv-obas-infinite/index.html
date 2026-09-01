@@ -3,247 +3,53 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>MZTV — Infinite OBAS / One Hour Evolution</title>
+<title>MZTV — Infinite OBAS / Spatial Orchestra</title>
 <style>
-  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}
-  body{image-rendering:pixelated;cursor:none}
-  canvas{display:block;width:100vw;height:100vh;image-rendering:pixelated;image-rendering:crisp-edges}
-  .bug{position:fixed;left:18px;top:18px;border:2px solid #bee119;background:#000;color:#bee119;padding:8px 10px;font:700 16px/1 monospace;letter-spacing:.08em;z-index:4}
-  .sound{
-    position:fixed;right:18px;top:18px;z-index:5;
-    border:2px solid #f0eed7;background:#000;color:#f0eed7;
-    padding:8px 10px;font:700 13px/1 monospace;letter-spacing:.08em;
-    cursor:pointer;user-select:none
-  }
-  .sound.on{border-color:#eb3791;color:#eb3791}
-  .phase{
-    position:fixed;left:18px;bottom:16px;color:#f0eed7;z-index:4;
-    font:700 11px/1 monospace;letter-spacing:.08em;opacity:.6
-  }
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}
+body{image-rendering:pixelated;cursor:none}
+canvas{display:block;width:100vw;height:100vh;image-rendering:pixelated;image-rendering:crisp-edges}
+.bug{position:fixed;left:18px;top:18px;border:2px solid #bee119;background:#000;color:#bee119;padding:8px 10px;font:700 16px/1 monospace;letter-spacing:.08em;z-index:4}
+.sound{position:fixed;right:18px;top:18px;z-index:5;border:2px solid #f0eed7;background:#000;color:#f0eed7;padding:8px 10px;font:700 13px/1 monospace;letter-spacing:.08em;cursor:pointer;user-select:none}
+.sound.on{border-color:#eb3791;color:#eb3791}.phase{position:fixed;left:18px;bottom:16px;color:#f0eed7;z-index:4;font:700 11px/1 monospace;letter-spacing:.08em;opacity:.65}
 </style>
 </head>
 <body>
 <div class="bug">MZTV</div>
 <button class="sound" id="sound">SOUND / CLICK TO BEGIN</button>
-<div class="phase" id="phase">OBAS // PHASE 01</div>
+<div class="phase" id="phase">OBAS // GROUND</div>
 <canvas id="c"></canvas>
 <script>
 (() => {
-  const c=document.getElementById('c');
-  const ctx=c.getContext('2d',{alpha:false});
-  const off=document.createElement('canvas');
-  const octx=off.getContext('2d',{alpha:false});
+const c=document.getElementById('c'),ctx=c.getContext('2d',{alpha:false}),off=document.createElement('canvas'),octx=off.getContext('2d',{alpha:false});
+const BLACK=[0,0,0],LIME=[190,225,25],PINK=[235,55,145],OFF=[240,238,215];
+const W=192,H=108;off.width=W;off.height=H;ctx.imageSmoothingEnabled=false;octx.imageSmoothingEnabled=false;
+const start=performance.now(),params=new URLSearchParams(location.search),preview=params.get('preview')==='1',HOUR=preview?60:3600;
+function resize(){c.width=Math.max(1,Math.floor(innerWidth));c.height=Math.max(1,Math.floor(innerHeight));ctx.imageSmoothingEnabled=false}addEventListener('resize',resize);resize();
+const sources=[{x:.18,y:.22,rx:.16,ry:.22,p:0,s:1},{x:.40,y:.18,rx:.22,ry:.15,p:1.3,s:-1},{x:.66,y:.26,rx:.18,ry:.24,p:2.6,s:1},{x:.84,y:.18,rx:.13,ry:.18,p:4.1,s:-1},{x:.25,y:.55,rx:.22,ry:.18,p:5.2,s:-1},{x:.52,y:.52,rx:.20,ry:.25,p:2.1,s:1},{x:.78,y:.55,rx:.24,ry:.18,p:3.4,s:-1},{x:.14,y:.82,rx:.18,ry:.17,p:4.8,s:1},{x:.43,y:.82,rx:.25,ry:.15,p:.8,s:-1},{x:.72,y:.82,rx:.18,ry:.20,p:5.9,s:1},{x:.91,y:.78,rx:.13,ry:.18,p:2.9,s:-1}];
+const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),smooth=x=>x*x*(3-2*x),blend=(a,b,t)=>a+(b-a)*smooth(clamp(t));
+function metaballs(x,y,t){let f=0;for(let i=0;i<sources.length;i++){const q=sources[i],driftX=Math.sin(t*(.071+i*.0031)+q.p)*(6+(i%3)*2),driftY=Math.cos(t*(.059+i*.0027)+q.p*1.37)*(5+(i%4)),px=q.x*W+driftX,py=q.y*H+driftY,rx=q.rx*W*(1+.10*Math.sin(t*.043+q.p)),ry=q.ry*H*(1+.10*Math.cos(t*.037+q.p)),dx=(x-px)/rx,dy=(y-py)/ry;f+=q.s*Math.exp(-(dx*dx+dy*dy)*1.85)}f+=.30*Math.sin(x*.055+1.7*Math.sin(y*.028+t*.083));f+=.25*Math.cos(y*.067-1.9*Math.sin(x*.024-t*.071));return f}
+function ribbons(x,y,t){const warp=8*Math.sin(y*.035+t*.13)+5*Math.sin(y*.079-t*.07);return Math.sin((x+warp)*.075+t*.11)+.55*Math.sin((x-y)*.035-t*.08)}
+function cells(x,y,t){const gx=x+10*Math.sin(y*.04+t*.12),gy=y+8*Math.sin(x*.03-t*.09);return Math.sin(gx*.115+t*.19)*Math.cos(gy*.10-t*.13)+.55*Math.sin((gx+gy)*.055+t*.07)}
+function vortex(x,y,t){const dx=x-W*.5,dy=y-H*.5,r=Math.sqrt(dx*dx+dy*dy),a=Math.atan2(dy,dx);return Math.sin(r*.20+a*4.0-t*.35)+.55*Math.cos(r*.085-a*7+t*.16)}
+function filaments(x,y,t){const dx=(x-W*.5)/W,dy=(y-H*.5)/H,r=Math.sqrt(dx*dx+dy*dy),f=Math.sin(x*.18+5*Math.sin(y*.018+t*.05))+Math.cos(y*.22-4*Math.sin(x*.014-t*.04));return f*.62+Math.sin((x+y)*.045+t*.09)*.35-r*.35}
+function evolvedField(x,y,t,p){const f0=metaballs(x,y,t),f1=ribbons(x,y,t),f2=cells(x,y,t),f3=vortex(x,y,t),f4=filaments(x,y,t);if(p<.22)return blend(f0,f1,p/.22);if(p<.44)return blend(f1,f2,(p-.22)/.22);if(p<.66)return blend(f2,f3,(p-.44)/.22);if(p<.86)return blend(f3,f4,(p-.66)/.20);const q=(p-.86)/.14;return blend(f4,.55*f4+.45*metaballs(x,y,t*.43)+.25*Math.sin((x-y)*.023+t*.031),q)}
+function dither(x,y,t,p,af){const crawl=Math.floor(t*(2.2+p*4)),spacing=p>.70?5:8;return((x*5+y*3+crawl)%spacing)<(p>.55?2:1)&&af>.055}
+function render(now){const elapsed=(now-start)/1000,p=clamp(elapsed/HOUR),t=elapsed*.24,img=octx.createImageData(W,H);for(let y=0;y<H;y++)for(let x=0;x<W;x++){const f=evolvedField(x,y,t,p),af=Math.abs(f),channel=blend(.22,.12,p);let col=BLACK;if(af>channel){const flip=Math.sin(t*.031+p*5.0)>0;col=(f>0)!==flip?PINK:LIME}else if(dither(x,y,t,p,af))col=OFF;const i=(y*W+x)*4;img.data[i]=col[0];img.data[i+1]=col[1];img.data[i+2]=col[2];img.data[i+3]=255}octx.putImageData(img,0,0);ctx.fillStyle='#000';ctx.fillRect(0,0,c.width,c.height);const sx=Math.max(1,Math.floor(c.width/W)),sy=Math.max(1,Math.floor(c.height/H)),s=Math.max(1,Math.min(sx,sy)),dw=W*s,dh=H*s,dx=Math.floor((c.width-dw)/2),dy=Math.floor((c.height-dh)/2);ctx.imageSmoothingEnabled=false;ctx.drawImage(off,0,0,W,H,dx,dy,dw,dh);const labels=['GROUND','ROOM','ENSEMBLE','AIR','ECOLOGY'];document.getElementById('phase').textContent='OBAS // '+labels[Math.min(4,Math.floor(p*5))];updateSound(p,elapsed);requestAnimationFrame(render)}
 
-  const BLACK=[0,0,0], LIME=[190,225,25], PINK=[235,55,145], OFF=[240,238,215];
-  const W=192,H=108;
-  off.width=W;off.height=H;
-  ctx.imageSmoothingEnabled=false;octx.imageSmoothingEnabled=false;
-
-  const start=performance.now();
-  const params=new URLSearchParams(location.search);
-  const preview=params.get('preview')==='1';
-  const HOUR=preview?60:3600; // preview=1 compresses the full hour into one minute
-
-  function resize(){
-    c.width=Math.max(1,Math.floor(innerWidth));
-    c.height=Math.max(1,Math.floor(innerHeight));
-    ctx.imageSmoothingEnabled=false;
-  }
-  addEventListener('resize',resize);resize();
-
-  const sources=[
-    {x:.18,y:.22,rx:.16,ry:.22,p:0,s:1},{x:.40,y:.18,rx:.22,ry:.15,p:1.3,s:-1},
-    {x:.66,y:.26,rx:.18,ry:.24,p:2.6,s:1},{x:.84,y:.18,rx:.13,ry:.18,p:4.1,s:-1},
-    {x:.25,y:.55,rx:.22,ry:.18,p:5.2,s:-1},{x:.52,y:.52,rx:.20,ry:.25,p:2.1,s:1},
-    {x:.78,y:.55,rx:.24,ry:.18,p:3.4,s:-1},{x:.14,y:.82,rx:.18,ry:.17,p:4.8,s:1},
-    {x:.43,y:.82,rx:.25,ry:.15,p:.8,s:-1},{x:.72,y:.82,rx:.18,ry:.20,p:5.9,s:1},
-    {x:.91,y:.78,rx:.13,ry:.18,p:2.9,s:-1}
-  ];
-
-  const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
-  const smooth=x=>x*x*(3-2*x);
-  const blend=(a,b,t)=>a+(b-a)*smooth(clamp(t));
-
-  function metaballs(x,y,t){
-    let f=0;
-    for(let i=0;i<sources.length;i++){
-      const q=sources[i];
-      const driftX=Math.sin(t*(.071+i*.0031)+q.p)*(6+(i%3)*2);
-      const driftY=Math.cos(t*(.059+i*.0027)+q.p*1.37)*(5+(i%4));
-      const px=q.x*W+driftX,py=q.y*H+driftY;
-      const rx=q.rx*W*(1+.10*Math.sin(t*.043+q.p));
-      const ry=q.ry*H*(1+.10*Math.cos(t*.037+q.p));
-      const dx=(x-px)/rx,dy=(y-py)/ry;
-      f+=q.s*Math.exp(-(dx*dx+dy*dy)*1.85);
-    }
-    f+=.30*Math.sin(x*.055+1.7*Math.sin(y*.028+t*.083));
-    f+=.25*Math.cos(y*.067-1.9*Math.sin(x*.024-t*.071));
-    return f;
-  }
-
-  function ribbons(x,y,t){
-    const warp=8*Math.sin(y*.035+t*.13)+5*Math.sin(y*.079-t*.07);
-    return Math.sin((x+warp)*.075+t*.11)+.55*Math.sin((x-y)*.035-t*.08);
-  }
-
-  function cells(x,y,t){
-    const gx=x+10*Math.sin(y*.04+t*.12),gy=y+8*Math.sin(x*.03-t*.09);
-    return Math.sin(gx*.115+t*.19)*Math.cos(gy*.10-t*.13)+.55*Math.sin((gx+gy)*.055+t*.07);
-  }
-
-  function vortex(x,y,t){
-    const dx=x-W*.5,dy=y-H*.5;
-    const r=Math.sqrt(dx*dx+dy*dy),a=Math.atan2(dy,dx);
-    return Math.sin(r*.20+a*4.0-t*.35)+.55*Math.cos(r*.085-a*7+t*.16);
-  }
-
-  function filaments(x,y,t){
-    const dx=(x-W*.5)/W,dy=(y-H*.5)/H;
-    const r=Math.sqrt(dx*dx+dy*dy);
-    const f=Math.sin(x*.18+5*Math.sin(y*.018+t*.05))+Math.cos(y*.22-4*Math.sin(x*.014-t*.04));
-    return f*.62 + Math.sin((x+y)*.045+t*.09)*.35 - r*.35;
-  }
-
-  function evolvedField(x,y,t,p){
-    // Five behaviors, crossfaded over the hour rather than abruptly switched.
-    const f0=metaballs(x,y,t);
-    const f1=ribbons(x,y,t);
-    const f2=cells(x,y,t);
-    const f3=vortex(x,y,t);
-    const f4=filaments(x,y,t);
-
-    if(p<.22) return blend(f0,f1,p/.22);
-    if(p<.44) return blend(f1,f2,(p-.22)/.22);
-    if(p<.66) return blend(f2,f3,(p-.44)/.22);
-    if(p<.86) return blend(f3,f4,(p-.66)/.20);
-
-    // After the hour it never freezes: final ecology slowly hybridizes forever.
-    const q=(p-.86)/.14;
-    return blend(f4, .55*f4+.45*metaballs(x,y,t*.43)+.25*Math.sin((x-y)*.023+t*.031), q);
-  }
-
-  function dither(x,y,t,p,af){
-    const crawl=Math.floor(t*(2.2+p*4));
-    const spacing=p>.70?5:8;
-    return ((x*5+y*3+crawl)%spacing)<(p>.55?2:1) && af>.055;
-  }
-
-  function render(now){
-    const elapsed=(now-start)/1000;
-    const p=clamp(elapsed/HOUR);
-    const t=elapsed*.24;
-    const img=octx.createImageData(W,H);
-
-    for(let y=0;y<H;y++){
-      for(let x=0;x<W;x++){
-        let f=evolvedField(x,y,t,p);
-        const af=Math.abs(f);
-        const channel=blend(.22,.12,p);
-        let col=BLACK;
-
-        if(af>channel){
-          // polarity slowly rotates later in the hour, so color territories themselves mutate
-          const flip=Math.sin(t*.031+p*5.0)>0;
-          col=(f>0)!==flip?PINK:LIME;
-        } else if(dither(x,y,t,p,af)){
-          col=OFF;
-        }
-
-        const i=(y*W+x)*4;
-        img.data[i]=col[0];img.data[i+1]=col[1];img.data[i+2]=col[2];img.data[i+3]=255;
-      }
-    }
-
-    octx.putImageData(img,0,0);
-    ctx.fillStyle='#000';ctx.fillRect(0,0,c.width,c.height);
-    const sx=Math.max(1,Math.floor(c.width/W)),sy=Math.max(1,Math.floor(c.height/H));
-    const s=Math.max(1,Math.min(sx,sy));
-    const dw=W*s,dh=H*s,dx=Math.floor((c.width-dw)/2),dy=Math.floor((c.height-dh)/2);
-    ctx.imageSmoothingEnabled=false;
-    ctx.drawImage(off,0,0,W,H,dx,dy,dw,dh);
-
-    const phase=Math.min(5,1+Math.floor(p*5));
-    document.getElementById('phase').textContent=`OBAS // PHASE 0${phase}`;
-    updateSound(p);
-    requestAnimationFrame(render);
-  }
-
-  // ---- SONIC FIELD -------------------------------------------------------
-  // Web Audio must be started by a user gesture in normal browsers.
-  let audio=null;
-  let sonic=null;
-  const soundBtn=document.getElementById('sound');
-
-  function makeVoice(ac,freq,type='sine'){
-    const osc=ac.createOscillator();
-    const gain=ac.createGain();
-    osc.type=type;osc.frequency.value=freq;gain.gain.value=0;
-    osc.connect(gain);osc.start();
-    return {osc,gain};
-  }
-
-  async function beginSound(){
-    if(!audio){
-      audio=new (window.AudioContext||window.webkitAudioContext)();
-      const master=audio.createGain();
-      const lowpass=audio.createBiquadFilter();
-      const delay=audio.createDelay(2.0);
-      const feedback=audio.createGain();
-      const wet=audio.createGain();
-
-      master.gain.value=.22;
-      lowpass.type='lowpass';lowpass.frequency.value=500;lowpass.Q.value=.7;
-      delay.delayTime.value=.72;feedback.gain.value=.24;wet.gain.value=.16;
-
-      lowpass.connect(master);master.connect(audio.destination);
-      lowpass.connect(delay);delay.connect(feedback);feedback.connect(delay);delay.connect(wet);wet.connect(master);
-
-      // 432-derived harmonic field: 54 / 108 / 216 Hz plus slow beating neighbors.
-      const voices=[
-        makeVoice(audio,54,'sine'),makeVoice(audio,54.18,'sine'),
-        makeVoice(audio,108,'triangle'),makeVoice(audio,107.73,'sine'),
-        makeVoice(audio,216,'sine'),makeVoice(audio,324,'sine')
-      ];
-      voices.forEach(v=>v.gain.connect(lowpass));
-
-      const lfo=audio.createOscillator();
-      const lfoGain=audio.createGain();
-      lfo.frequency.value=.031;lfoGain.gain.value=.035;
-      lfo.connect(lfoGain);lfo.start();
-      lfoGain.connect(master.gain);
-
-      sonic={master,lowpass,delay,feedback,wet,voices,lfo};
-    }
-    await audio.resume();
-    soundBtn.textContent='SOUND / ON';soundBtn.classList.add('on');
-  }
-
-  soundBtn.addEventListener('click',beginSound);
-  addEventListener('keydown',e=>{if(e.key.toLowerCase()==='s')beginSound();});
-
-  function updateSound(p){
-    if(!audio||!sonic)return;
-    const now=audio.currentTime;
-    const emergence=smooth(p);
-    const levels=[.070,.045,.045,.032,.022,.012];
-    const entries=[0,.08,.20,.38,.58,.76];
-
-    sonic.voices.forEach((v,i)=>{
-      const local=smooth(clamp((p-entries[i])/.22));
-      v.gain.gain.setTargetAtTime(levels[i]*local,now,2.5);
-    });
-
-    sonic.lowpass.frequency.setTargetAtTime(260+2200*emergence,now,5);
-    sonic.feedback.gain.setTargetAtTime(.16+.26*emergence,now,5);
-    sonic.wet.gain.setTargetAtTime(.08+.22*emergence,now,5);
-
-    // Extremely slow harmonic drift; avoids a static drone without becoming melody-forward.
-    sonic.voices[2].osc.frequency.setTargetAtTime(108*(1+.004*Math.sin(performance.now()/53000)),now,4);
-    sonic.voices[4].osc.frequency.setTargetAtTime(216*(1+.007*Math.sin(performance.now()/71000)),now,4);
-    sonic.voices[5].osc.frequency.setTargetAtTime(324*(1+.009*Math.sin(performance.now()/89000)),now,4);
-  }
-
-  requestAnimationFrame(render);
+// ---- SPATIAL ORCHESTRA --------------------------------------------------
+let ac=null,S=null;const soundBtn=document.getElementById('sound');
+function noiseBuffer(ac,dur=2){const b=ac.createBuffer(1,ac.sampleRate*dur,ac.sampleRate),d=b.getChannelData(0);let last=0;for(let i=0;i<d.length;i++){const w=Math.random()*2-1;last=.985*last+.15*w;d[i]=last*.8}return b}
+function impulse(ac,dur=4,decay=3){const b=ac.createBuffer(2,ac.sampleRate*dur,ac.sampleRate);for(let ch=0;ch<2;ch++){const d=b.getChannelData(ch);for(let i=0;i<d.length;i++){const env=Math.pow(1-i/d.length,decay);d[i]=(Math.random()*2-1)*env*(ch?0.92:1)}}return b}
+function makePanner(ac,x=0,y=0,z=-1){const p=ac.createPanner();p.panningModel='HRTF';p.distanceModel='inverse';p.refDistance=1;p.maxDistance=50;p.rolloffFactor=.35;p.positionX.value=x;p.positionY.value=y;p.positionZ.value=z;return p}
+function tone(ac,freq,type='sine',x=0,z=-2){const o=ac.createOscillator(),g=ac.createGain(),p=makePanner(ac,x,0,z);o.type=type;o.frequency.value=freq;g.gain.value=0;o.connect(g);g.connect(p);o.start();return{o,g,p,base:freq}}
+function bandNoise(ac,lo,hi,x,z){const src=ac.createBufferSource(),bp=ac.createBiquadFilter(),g=ac.createGain(),p=makePanner(ac,x,0,z);src.buffer=noiseBuffer(ac,3);src.loop=true;bp.type='bandpass';bp.frequency.value=Math.sqrt(lo*hi);bp.Q.value=Math.max(.2,Math.sqrt(lo*hi)/(hi-lo));g.gain.value=0;src.connect(bp);bp.connect(g);g.connect(p);src.start();return{src,bp,g,p}}
+async function beginSound(){if(!ac){ac=new (window.AudioContext||window.webkitAudioContext)();const master=ac.createGain(),comp=ac.createDynamicsCompressor(),room=ac.createConvolver(),wet=ac.createGain(),dry=ac.createGain();master.gain.value=.42;comp.threshold.value=-18;comp.knee.value=18;comp.ratio.value=3;comp.attack.value=.03;comp.release.value=.7;room.buffer=impulse(ac,5.5,2.6);wet.gain.value=.22;dry.gain.value=.80;dry.connect(comp);wet.connect(comp);room.connect(wet);comp.connect(master);master.connect(ac.destination);
+const groups={sub:[tone(ac,36,'sine',-.2,-3),tone(ac,54,'sine',.3,-4)],low:[tone(ac,72,'triangle',-1.8,-3),tone(ac,108,'sine',1.7,-2.5)],mid:[tone(ac,144,'sine',-2.5,-2),tone(ac,216,'triangle',2.3,-2),tone(ac,288,'sine',-.8,-1.5),tone(ac,432,'sine',1.1,-1.7)],high:[tone(ac,648,'sine',-3,-1.3),tone(ac,864,'sine',2.8,-1.2),tone(ac,1296,'sine',0,-1.1),tone(ac,1728,'sine',1.8,-1.0)],noise:[bandNoise(ac,40,120,-2,-4),bandNoise(ac,180,700,2,-2.5),bandNoise(ac,900,4000,-2.8,-1.4),bandNoise(ac,4500,12000,2.8,-1.2)]};Object.values(groups).flat().forEach(v=>{v.p.connect(dry);v.p.connect(room)});S={master,comp,room,wet,dry,groups,lastEvent:0};}await ac.resume();soundBtn.textContent='SOUND / ON';soundBtn.classList.add('on')}
+soundBtn.addEventListener('click',beginSound);addEventListener('keydown',e=>{if(e.key.toLowerCase()==='s')beginSound()});
+function scheduleSpark(p){if(!ac||!S)return;const now=ac.currentTime;const o=ac.createOscillator(),g=ac.createGain(),panner=makePanner(ac,(Math.random()*2-1)*4,(Math.random()*2-1)*1.5,-1-Math.random()*4);const scale=[216,243,288,324,384,432,486,576,648,768,864,972,1152,1296,1536,1728,2304,3456];const f=scale[Math.floor(Math.random()*scale.length)]*(Math.random()<.18?.5:1);o.type=Math.random()<.7?'sine':'triangle';o.frequency.value=f;g.gain.setValueAtTime(0,now);g.gain.linearRampToValueAtTime(.014+.018*p,now+.12);g.gain.exponentialRampToValueAtTime(.0001,now+2.5+Math.random()*5);o.connect(g);g.connect(panner);panner.connect(S.dry);panner.connect(S.room);o.start(now);o.stop(now+8)}
+function move(v,i,t,spread=1){const x=Math.sin(t*(.017+i*.003)+i*1.9)*3.4*spread,z=-1.2-(1+Math.cos(t*(.013+i*.002)+i))*2.2;v.p.positionX.setTargetAtTime(x,ac.currentTime,2);v.p.positionZ.setTargetAtTime(z,ac.currentTime,2)}
+function updateSound(p,elapsed){if(!ac||!S)return;const now=ac.currentTime,g=S.groups;const set=(arr,level,entry,spread=1)=>arr.forEach((v,i)=>{const local=smooth(clamp((p-entry)/.20));v.g.gain.setTargetAtTime(level*local*(.72+.28*Math.sin(elapsed*(.011+i*.002)+i)),now,3);move(v,i,elapsed,spread)});set(g.sub,.055,0,.25);set(g.low,.032,.08,.55);set(g.mid,.018,.20,1);set(g.high,.008,.42,1.25);const nlev=[.018,.010,.006,.0035],nent=[0,.16,.38,.60];g.noise.forEach((v,i)=>{const local=smooth(clamp((p-nent[i])/.22));v.g.gain.setTargetAtTime(nlev[i]*local,now,4);move(v,i+12,elapsed,1.2)});S.wet.gain.setTargetAtTime(.18+.30*smooth(p),now,5);S.dry.gain.setTargetAtTime(.88-.18*smooth(p),now,5);S.master.gain.setTargetAtTime(.34+.08*smooth(p),now,5);g.mid.forEach((v,i)=>v.o.frequency.setTargetAtTime(v.base*(1+.0045*Math.sin(elapsed*(.0031+i*.0007)+i)),now,3));g.high.forEach((v,i)=>v.o.frequency.setTargetAtTime(v.base*(1+.008*Math.sin(elapsed*(.0043+i*.0008)+i*2)),now,3));const interval=blend(22,5,p);if(elapsed-S.lastEvent>interval){S.lastEvent=elapsed;scheduleSpark(p)}}
+requestAnimationFrame(render);
 })();
 </script>
 </body>
