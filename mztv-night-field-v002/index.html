@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>MZTV // NIGHT FIELD v0.0.2</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#040508;color:#dedbcf;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}canvas{position:fixed;inset:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}#gate{position:fixed;inset:0;display:grid;place-items:center;background:#040508e8;z-index:5;cursor:pointer;text-transform:uppercase;letter-spacing:.14em}#gate div{border:1px solid #dedbcf55;padding:20px 24px;font-size:12px;line-height:1.7;text-align:center}#hud{position:fixed;left:16px;bottom:14px;font-size:9px;line-height:1.5;letter-spacing:.1em;text-transform:uppercase;opacity:.42;z-index:2;pointer-events:none}#city{position:fixed;right:14px;bottom:14px;z-index:3;background:#040508;color:#dedbcf;border:1px solid #dedbcf33;font:9px ui-monospace,SFMono-Regular,Menlo,monospace;text-transform:uppercase;padding:6px 8px;opacity:.5}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">MZTV // NIGHT FIELD / v0.0.2<br><span id="place">BALTIMORE, MD</span> · <span id="clock"></span><br>REAL-TIME ZENITH FIELD<br><span id="state">audio: sleeping</span></div>
+<select id="city" aria-label="Observer city"></select>
+<div id="gate"><div>MZTV // NIGHT FIELD / v0.0.2<br><br>enter transmission<br><span style="opacity:.55">real sky + brighter 432-reference field</span></div></div>
+<script>
+(()=>{
+const c=document.getElementById('c'),x=c.getContext('2d',{alpha:false}),gate=document.getElementById('gate'),state=document.getElementById('state'),place=document.getElementById('place'),clock=document.getElementById('clock'),city=document.getElementById('city');
+const W=320,H=180,TAU=Math.PI*2,D=Math.PI/180;c.width=W;c.height=H;x.imageSmoothingEnabled=false;const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),rng=(a,b)=>a+Math.random()*(b-a);
+const CITIES={baltimore:{label:'Baltimore, MD',lat:39.2904,lon:-76.6122,tz:'America/New_York'},detroit:{label:'Detroit, MI',lat:42.3314,lon:-83.0458,tz:'America/Detroit'},london:{label:'London, UK',lat:51.5072,lon:-0.1276,tz:'Europe/London'},kingston:{label:'Kingston, JM',lat:17.9712,lon:-76.7936,tz:'America/Jamaica'},berlin:{label:'Berlin, DE',lat:52.52,lon:13.405,tz:'Europe/Berlin'}};
+Object.entries(CITIES).forEach(([k,v])=>{const o=document.createElement('option');o.value=k;o.textContent=v.label;city.appendChild(o)});city.value=localStorage.getItem('nf2city')||'baltimore';let observer=CITIES[city.value];function setObs(k){observer=CITIES[k]||CITIES.baltimore;place.textContent=observer.label.toUpperCase();localStorage.setItem('nf2city',k)}city.onchange=e=>setObs(e.target.value);setObs(city.value);
+
+const stars={
+Sirius:[6.7525,-16.7161,-1.46],Arcturus:[14.261,19.1824,-.05],Vega:[18.6156,38.7837,.03],Capella:[5.2782,45.998,.08],Rigel:[5.2423,-8.2016,.13],Procyon:[7.655,5.225,.34],Betelgeuse:[5.9195,7.4071,.42],Altair:[19.8464,8.8683,.77],Aldebaran:[4.5987,16.5093,.85],Antares:[16.4901,-26.432,.96],Spica:[13.4199,-11.1614,.98],Pollux:[7.7553,28.0262,1.14],Deneb:[20.6905,45.2803,1.25],Regulus:[10.1395,11.9672,1.35],Castor:[7.5767,31.8883,1.58],Bellatrix:[5.4189,6.3497,1.64],Elnath:[5.4382,28.6074,1.65],Alnilam:[5.6036,-1.2019,1.69],Alnitak:[5.6793,-1.9426,1.74],Alioth:[12.9005,55.9598,1.76],Mirfak:[3.4054,49.8612,1.79],Dubhe:[11.0621,61.7508,1.79],Alkaid:[13.7923,49.3133,1.86],Polaris:[2.5303,89.2641,1.98],Mizar:[13.3987,54.9254,2.06],Saiph:[5.7959,-9.6696,2.07],Mintaka:[5.5334,-.2991,2.23],Merak:[11.0307,56.3824,2.34],Phecda:[11.8972,53.6948,2.41],Megrez:[12.257,57.0326,3.31],Schedar:[.6751,56.5373,2.24],Caph:[.1529,59.1498,2.27],GammaCas:[.9451,60.7167,2.47],Ruchbah:[1.4303,60.2353,2.68],Segin:[1.9066,63.67,3.35],Sheliak:[18.8347,33.3627,3.52],Sulafat:[18.9824,32.6896,3.25],Albireo:[19.512,27.9597,3.05],Sadr:[20.3705,40.2567,2.23],Gienah:[20.7702,33.9703,2.46],Tarazed:[19.7709,10.6133,2.72],Alshain:[19.9219,6.4068,3.71]
+};
+const faint=[];let seed=82731;const rand=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);for(let i=0;i<430;i++)faint.push({ra:rand()*24,dec:Math.asin(rand()*2-1)/D,mag:3.5+rand()*2.2});
+const constellations=[
+{name:'URSA MAJOR',edges:[['Dubhe','Merak'],['Merak','Phecda'],['Phecda','Megrez'],['Megrez','Dubhe'],['Megrez','Alioth'],['Alioth','Mizar'],['Mizar','Alkaid']]},
+{name:'CASSIOPEIA',edges:[['Caph','Schedar'],['Schedar','GammaCas'],['GammaCas','Ruchbah'],['Ruchbah','Segin']]},
+{name:'LYRA',edges:[['Vega','Sheliak'],['Sheliak','Sulafat'],['Sulafat','Vega']]},
+{name:'CYGNUS',edges:[['Deneb','Sadr'],['Sadr','Albireo'],['Sadr','Gienah']]},
+{name:'AQUILA',edges:[['Tarazed','Altair'],['Altair','Alshain']]},
+{name:'ORION',edges:[['Betelgeuse','Bellatrix'],['Bellatrix','Mintaka'],['Mintaka','Alnilam'],['Alnilam','Alnitak'],['Alnitak','Saiph'],['Saiph','Rigel'],['Rigel','Bellatrix']]}
+];
+function jd(ms){return ms/86400000+2440587.5}function gmst(ms){const J=jd(ms),T=(J-2451545)/36525;return ((280.46061837+360.98564736629*(J-2451545)+.000387933*T*T-T*T*T/38710000)%360+360)%360}
+function horiz(ra,dec,ms){const lat=observer.lat*D,de=dec*D,lst=(gmst(ms)+observer.lon)*D;let ha=lst-ra*15*D;ha=Math.atan2(Math.sin(ha),Math.cos(ha));const alt=Math.asin(clamp(Math.sin(de)*Math.sin(lat)+Math.cos(de)*Math.cos(lat)*Math.cos(ha),-1,1));const yy=-Math.sin(ha)*Math.cos(de),xx=Math.sin(de)*Math.cos(lat)-Math.cos(de)*Math.sin(lat)*Math.cos(ha);let az=Math.atan2(yy,xx);if(az<0)az+=TAU;return{alt,az}}
+function proj(alt,az){if(alt<=0)return null;const R=Math.min(W,H)*.48,r=(1-alt/(Math.PI/2))*R;return{x:W/2+Math.sin(az)*r,y:H/2-Math.cos(az)*r,alt}}
+function draw(){const ms=Date.now();x.fillStyle='#040508';x.fillRect(0,0,W,H);const R=Math.min(W,H)*.48;x.strokeStyle='rgba(222,219,207,.045)';x.beginPath();x.arc(W/2,H/2,R,0,TAU);x.stroke();
+for(const s of faint){const h=horiz(s.ra,s.dec,ms),p=proj(h.alt,h.az);if(!p)continue;x.globalAlpha=clamp((5.9-s.mag)*.085,.03,.15);x.fillStyle='#dedbcf';x.fillRect(p.x|0,p.y|0,1,1)}x.globalAlpha=1;
+const points={};for(const [name,v] of Object.entries(stars)){const h=horiz(v[0],v[1],ms),p=proj(h.alt,h.az);points[name]=p;if(!p)continue;const size=v[2]<.35?2:1;x.globalAlpha=clamp(.9-v[2]*.1,.32,.95);x.fillStyle='#e5e2d6';x.fillRect(p.x|0,p.y|0,size,size)}x.globalAlpha=1;
+for(const con of constellations){let visible=0,cx=0,cy=0;for(const [a,b] of con.edges){const p=points[a],q=points[b];if(!p||!q)continue;visible++;cx+=(p.x+q.x)/2;cy+=(p.y+q.y)/2;x.globalAlpha=.105;x.strokeStyle='#d8d4c8';x.lineWidth=1;x.beginPath();x.moveTo(Math.round(p.x)+.5,Math.round(p.y)+.5);x.lineTo(Math.round(q.x)+.5,Math.round(q.y)+.5);x.stroke()}if(visible>=2){x.globalAlpha=.16;x.fillStyle='#d8d4c8';x.font='5px monospace';x.fillText(con.name,(cx/visible)|0,(cy/visible)|0)}}x.globalAlpha=1;
+x.globalAlpha=.14;x.font='6px monospace';x.fillStyle='#dedbcf';x.fillText('MZTV / NIGHT FIELD / v0.0.2',8,11);x.globalAlpha=1;clock.textContent=new Intl.DateTimeFormat('en-US',{timeZone:observer.tz,hour:'numeric',minute:'2-digit',second:'2-digit'}).format(new Date(ms));requestAnimationFrame(draw)}requestAnimationFrame(draw);
+
+let ac,master,started=false,voices=[];const A=432,base=A/8,ratios=[1,9/8,6/5,5/4,4/3,3/2,5/3,15/8,2];
+function brown(){const b=ac.createBuffer(1,ac.sampleRate*8,ac.sampleRate),d=b.getChannelData(0);let last=0;for(let i=0;i<d.length;i++){last=(last+.014*(Math.random()*2-1))/1.014;d[i]=last*2.45}const s=ac.createBufferSource(),f=ac.createBiquadFilter(),g=ac.createGain();s.buffer=b;s.loop=true;f.type='lowpass';f.frequency.value=760;f.Q.value=.28;g.gain.value=.011;s.connect(f).connect(g).connect(master);s.start()}
+function voice(freq,level,pan,type='sine'){const o=ac.createOscillator(),g=ac.createGain(),p=ac.createStereoPanner(),l=ac.createOscillator(),lg=ac.createGain();o.type=type;o.frequency.value=freq;g.gain.value=level;p.pan.value=pan;l.frequency.value=rng(.0017,.006);lg.gain.value=level*.22;l.connect(lg).connect(g.gain);o.connect(g).connect(p).connect(master);o.start();l.start();voices.push({o,g,p,level})}
+async function start(){if(started){if(ac.state==='suspended')await ac.resume();return}started=true;ac=new(window.AudioContext||window.webkitAudioContext)();master=ac.createGain();master.gain.value=.0001;const comp=ac.createDynamicsCompressor();comp.threshold.value=-27;comp.knee.value=20;comp.ratio.value=2.2;comp.attack.value=.12;comp.release.value=2.5;master.connect(comp).connect(ac.destination);
+voice(base,.028,-.34,'sine');voice(base*1.5,.017,.18,'sine');voice(base*2,.015,.34,'triangle');voice(base*1.25,.012,-.05,'sine');voice(base*3,.006,.48,'sine');brown();master.gain.exponentialRampToValueAtTime(.48,ac.currentTime+18);
+setInterval(()=>{if(!ac||ac.state!=='running')return;const v=voices[(Math.random()*voices.length)|0],now=ac.currentTime,target=base*ratios[(Math.random()*ratios.length)|0]*(Math.random()<.28?2:1);v.o.frequency.cancelScheduledValues(now);v.o.frequency.setValueAtTime(Math.max(20,v.o.frequency.value),now);v.o.frequency.exponentialRampToValueAtTime(target,now+rng(28,78));v.p.pan.cancelScheduledValues(now);v.p.pan.linearRampToValueAtTime(rng(-.62,.62),now+rng(35,95))},22000);
+setInterval(()=>{if(!ac||ac.state!=='running')return;const v=voices[(Math.random()*voices.length)|0],now=ac.currentTime;v.g.gain.cancelScheduledValues(now);v.g.gain.setValueAtTime(v.g.gain.value,now);v.g.gain.linearRampToValueAtTime(v.level*rng(.65,1.35),now+rng(20,55))},17000);state.textContent='audio: live / A=432 reference'}
+gate.onclick=async()=>{await start();gate.style.display='none'};
+})();
+</script></body></html>
